@@ -1,9 +1,9 @@
 # Postgres Plugin
 
 This plugin makes a backup of each database found in Postgres in a single file.
-For restore select the needed database file, found in `/_Postgresbackups_` in the catalog. I literally took the plugin-mysql and ran sed across it to make this plugin. Then made some minor tweaks. 
+For restore select the needed database file, found in `/_pgsqlbackups_/` in the catalog. I literally took the plugin-mysql and ran sed across it to make this plugin. Then made some minor tweaks. 
 
-##ERRORS
+## ERRORS
 do not try to run estimate from the bconsole as it will cause this plugin to hang dumping the databases. You will need to restart the bareos-fd client to get it back. I'm not sure how to fix this yet. Working onit. 
 
 ## Prerequisites
