@@ -24,12 +24,11 @@
 
 ## Modified by Sean Sullivan on 2018. Blah Blah. Remove this line
 
-from bareosfd import *
-from bareos_fd_consts import *
+import bareosfd
+from bareos_fd_consts import bJobMessageType, bFileType, bRCs
 import os
-from subprocess import *
-from  BareosFdPluginBaseclass import *
-import BareosFdWrapper
+from subprocess import Popen, PIPE
+import BareosFdPluginBaseclass
 
 
 class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
@@ -37,8 +36,14 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
         Plugin for backing up all postgres databases found in a specific postgres server
     '''       
     def __init__(self, context, plugindef):
-        BareosFdPluginBaseclass.__init__(self, context, plugindef)
-        self.file=None
+        bareosfd.DebugMessage(
+            context, 100,
+            "Constructor called in module {self_name} with plugindef={plugin_def}\n".format(
+            self_name = __name__, plugin_def = plugindef))
+        # Last argument of super constructor is a list of mandatory arguments
+        super(BareosFdPluginLocalFileset, self).__init__(context, plugindef)
+        self.file = None
+
 
     def parse_plugin_definition(self,context, plugindef):
         '''
@@ -96,23 +101,23 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
             showDb.wait()
             returnCode = showDb.poll()
             if returnCode == None:
-                JobMessage(context, bJobMessageType['M_FATAL'], "No databases specified and show databases failed for unknown reason");
-                DebugMessage(context, 10, "Failed pgsql command: '%s'" %showDbCommand)
+                bareosfd.JobMessage(context, bJobMessageType['M_FATAL'], "No databases specified and show databases failed for unknown reason");
+                bareosfd.DebugMessage(context, 10, "Failed pgsql command: '%s'" %showDbCommand)
                 return bRCs['bRC_Error'];
             if returnCode != 0:
-                (stdOut, stdError) = showDb.communicate()    
-                JobMessage(context, bJobMessageType['M_FATAL'], "No databases specified and show databases failed. %s" %stdError);
-                DebugMessage(context, 10, "Failed pgsql command: '%s'" %showDbCommand)
+                (stdOut, stdError) = showDb.communicate()
+                bareosfd.JobMessage(context, bJobMessageType['M_FATAL'], "No databases specified and show databases failed. %s" %stdError);
+                bareosfd.DebugMessage(context, 10, "Failed pgsql command: '%s'" %showDbCommand)
                 return bRCs['bRC_Error'];
 
         if 'ignore_db' in self.options:
-            DebugMessage(context, 100, "databases in ignore list: %s\n" %(self.options['ignore_db'].split(',')));
+            bareosfd.DebugMessage(context, 100, "databases in ignore list: %s\n" %(self.options['ignore_db'].split(',')));
             for ignored_cur in self.options['ignore_db'].split(','):
                 try:
                     self.databases.remove(ignored_cur)
                 except:
                     pass
-        DebugMessage(context, 100, "databases to backup: %s\n" %(self.databases));
+        bareosfd.DebugMessage(context, 100, "databases to backup: %s\n" %(self.databases));
         return bRCs['bRC_OK'];
 
 
@@ -122,10 +127,10 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
         For each database to backup we create a pgsqldump subprocess, wrting to
         the pipe self.stream.stdout
         '''
-        DebugMessage(context, 100, "start_backup called\n");
+        bareosfd.DebugMessage(context, 100, "start_backup called\n");
         if not self.databases:
-            DebugMessage(context,100,"No databases to backup")
-            JobMessage(context, bJobMessageType['M_ERROR'], "No databases to backup.\n");
+            bareosfd.DebugMessage(context,100,"No databases to backup")
+            bareosfd.JobMessage(context, bJobMessageType['M_ERROR'], "No databases to backup.\n");
             return bRCs['bRC_Skip']
 
         db = self.databases.pop()
@@ -151,10 +156,10 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
                                                                        connectopts = self.pgsqlconnect,
                                                                        database = db,
                                                                        dumpopts =  self.dumpoptions))
-        DebugMessage(context, 100, "Dumper: '" + dumpcommand + "'\n")
+        bareosfd.DebugMessage(context, 100, "Dumper: '" + dumpcommand + "'\n")
         self.stream = Popen(dumpcommand, shell=True, stdout=PIPE, stderr=PIPE)
 
-        JobMessage(context, bJobMessageType['M_INFO'], "Starting backup of " + savepkt.fname + "\n");
+        bareosfd.JobMessage(context, bJobMessageType['M_INFO'], "Starting backup of " + savepkt.fname + "\n");
         return bRCs['bRC_OK'];
 
 
@@ -163,7 +168,7 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
         Called for io operations. We read from pipe into buffers or on restore
         create a file for each database and write into it.
         '''
-        DebugMessage(context, 100, "plugin_io called with " + str(IOP.func) + "\n");
+        bareosfd.DebugMessage(context, 100, "plugin_io called with " + str(IOP.func) + "\n");
 
         if IOP.func == bIOPS['IO_OPEN']:
             try:
@@ -171,8 +176,7 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
                     self.file = open(IOP.fname, 'wb');
             except Exception as msg:
                 IOP.status = -1;
-                DebugMessage(context, 100, "Error opening file: " + IOP.fname + "\n");
-                print(msg);
+                bareosfd.DebugMessage(context, 100, "Error opening file: " + IOP.fname + "\n");
                 return bRCs['bRC_Error'];
             return bRCs['bRC_OK']
 
@@ -181,7 +185,7 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
             IOP.status = self.stream.stdout.readinto(IOP.buf)
             IOP.io_errno = 0
             return bRCs['bRC_OK']
-        
+
         elif IOP.func == bIOPS['IO_WRITE']:
             try:
                 self.file.write(IOP.buf);
@@ -189,19 +193,19 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
                 IOP.io_errno = 0
             except IOError as msg:
                 IOP.io_errno = -1
-                DebugMessage(context, 100, "Error writing data: " + msg + "\n");
+                bareosfd.DebugMessage(context, 100, "Error writing data: " + msg + "\n");
             return bRCs['bRC_OK'];
 
         elif IOP.func == bIOPS['IO_CLOSE']:
             if self.file:
                 self.file.close()
             return bRCs['bRC_OK']
-        
+
         elif IOP.func == bIOPS['IO_SEEK']:
             return bRCs['bRC_OK']
-        
+
         else:
-            DebugMessage(context,100,"plugin_io called with unsupported IOP:"+str(IOP.func)+"\n")
+            bareosfd.DebugMessage(context,100,"plugin_io called with unsupported IOP:"+str(IOP.func)+"\n")
             return bRCs['bRC_OK']
 
     def end_backup_file(self, context):
@@ -213,16 +217,16 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
         self.stream.wait()
         returnCode = self.stream.poll()
         if returnCode == None:
-            JobMessage(context, bJobMessageType['M_ERROR'], "Dump command not finished properly for unknown reason")
+            bareosfd.JobMessage(context, bJobMessageType['M_ERROR'], "Dump command not finished properly for unknown reason")
             returnCode = -99
         else:
-            DebugMessage(context, 100, "end_backup_file() entry point in Python called. Returncode: %d\n" %self.stream.returncode)
+            bareosfd.DebugMessage(context, 100, "end_backup_file() entry point in Python called. Returncode: %d\n" %self.stream.returncode)
             if returnCode != 0:
                 (stdOut, stdError) = self.stream.communicate()
                 if stdError == None:
                     stdError = ''
-                JobMessage(context, bJobMessageType['M_ERROR'], "Dump command returned non-zero value: %d, message: %s\n" %(returnCode,stdError));
-            
+                bareosfd.JobMessage(context, bJobMessageType['M_ERROR'], "Dump command returned non-zero value: %d, message: %s\n" %(returnCode,stdError));
+
         if self.databases:
                 return bRCs['bRC_More']
         else:
