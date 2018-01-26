@@ -25,13 +25,13 @@
 ## Modified by Sean Sullivan on 2018. Blah Blah. Remove this line
 
 import bareosfd
-from bareos_fd_consts import bJobMessageType, bFileType, bRCs
+from bareos_fd_consts import bJobMessageType, bFileType, bRCs, bIOPS
 import os
 from subprocess import Popen, PIPE
 import BareosFdPluginBaseclass
 
 
-class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
+class BareosFdPostgreSQLclass (BareosFdPluginBaseclass.BareosFdPluginBaseclass):
     '''
         Plugin for backing up all postgres databases found in a specific postgres server
     '''       
@@ -41,14 +41,14 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
             "Constructor called in module {self_name} with plugindef={plugin_def}\n".format(
             self_name = __name__, plugin_def = plugindef))
         # Last argument of super constructor is a list of mandatory arguments
-        super(BareosFdPluginLocalFileset, self).__init__(context, plugindef)
+        super(BareosFdPostgreSQLclass, self).__init__(context, plugindef)
         self.file = None
 
 
     def parse_plugin_definition(self,context, plugindef):
         '''
         '''
-        BareosFdPluginBaseclass.parse_plugin_definition(self, context, plugindef)
+        BareosFdPluginBaseclass.BareosFdPluginBaseclass.parse_plugin_definition(self, context, plugindef)
 
         # pgsql host and credentials, by default we use localhost and root and
         # prefer to have a my.cnf with pgsql credentials
@@ -141,7 +141,7 @@ class BareosFdPostgreSQLclass (BareosFdPluginBaseclass):
         sizeDb.wait()
         sizereturnCode = sizeDb.poll()
 
-        statp = StatPacket()
+        statp = bareosfd.StatPacket()
         if not size_curr_db == "NULL\n":
             try:
                 statp.size = int(size_curr_db)
