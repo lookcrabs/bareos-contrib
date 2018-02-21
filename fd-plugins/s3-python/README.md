@@ -1,4 +1,4 @@
-# Postgres Plugin
+# S3 Plugin
 
 This plugin makes a backup of each bucket+key found in s3.
 For restore select the needed database file, found in `/_bucket_/key` in the catalog. I literally took the plugin-mysql and bashed this into it. It's gross but I don't know how to do any better. 
