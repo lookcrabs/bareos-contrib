@@ -24,7 +24,7 @@
 # Bareos python plugins class that adds files from a local list to
 # the backup fileset
 ###
-### Edited and adjusted to be used for s3 backups by Me (Sean Sullivan)
+### Edited and adjusted to be used for s3 backups by Me (Sean Sullivan) 2018
 ###
 
 import bareosfd
