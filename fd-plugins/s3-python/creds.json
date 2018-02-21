@@ -1,0 +1,13 @@
+{
+  "access_key": "",
+  "secret_key": "",
+  "host": "https://gateway.url.org",
+  "is_secure": true,
+  "signature": "s3",
+  "astyle": "path",
+  "bucket_list": ["testbucket",
+                  "otherbucket",
+                  "weefuntimes",
+                  "someother_bucket"],
+  "exclude_buckets": [ "genomel" ]
+}
